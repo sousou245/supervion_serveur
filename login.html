@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion / Inscription</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap');
+
+        :root {
+            --primary-color: #00eaff;
+            --secondary-color: #ff00ff;
+            --background: #0a0a0a;
+            --glass: rgba(255, 255, 255, 0.1);
+            --neon-shadow: 0px 0px 15px rgba(0, 234, 255, 0.7);
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: var(--background);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            background: var(--glass);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: var(--neon-shadow);
+            text-align: center;
+            width: 300px;
+            position: relative;
+            z-index: 1;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button {
+            background: var(--primary-color);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+            box-shadow: var(--neon-shadow);
+        }
+
+        /* Animation de fond */
+        .background-animation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .background-animation span {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            opacity: 0.5;
+            border-radius: 50%;
+            animation: move 10s linear infinite;
+        }
+
+        .background-animation span:nth-child(2) {
+            left: 30%;
+            animation-duration: 8s;
+        }
+
+        .background-animation span:nth-child(3) {
+            left: 60%;
+            animation-duration: 12s;
+        }
+
+        .background-animation span:nth-child(4) {
+            left: 90%;
+            animation-duration: 14s;
+        }
+
+        @keyframes move {
+            0% {
+                transform: translateY(100vh) scale(0.5);
+                opacity: 0.3;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-10vh) scale(1.5);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    
+    <div class="container">
+        <h2>Connexion</h2>
+        <input type="text" id="username" placeholder="Nom d'utilisateur">
+        <input type="password" id="password" placeholder="Mot de passe">
+        <button onclick="login()">Se connecter</button>
+    </div>
+
+    <!-- Boîte de dialogue améliorée -->
+<div id="errorBox" class="error-box">
+    <p>⚠️ Identifiants incorrects. Veuillez réessayer.</p>
+    <button onclick="closeError()">OK</button>
+</div>
+
+<style>
+    .error-box {
+        position: absolute;
+        top: -80px; /* La boîte apparaît juste au-dessus du formulaire */
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 0, 0, 0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+        text-align: center;
+        width: 280px;
+        display: none;
+        transition: 0.3s ease-in-out;
+    }
+
+    .error-box button {
+        background: white;
+        color: red;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+
+    .error-box button:hover {
+        background: #ffdddd;
+    }
+</style>
+
+<script>
+    function showError() {
+        const errorBox = document.getElementById('errorBox');
+        errorBox.style.display = 'block';
+
+        // Animation pour faire apparaître la boîte
+        errorBox.style.top = '10px';
+    }
+
+    function closeError() {
+        const errorBox = document.getElementById('errorBox');
+
+        // Animation pour masquer la boîte
+        errorBox.style.top = '-80px';
+        setTimeout(() => {
+            errorBox.style.display = 'none';
+        }, 300); // Disparaît après 300ms
+    }
+
+    async function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        const response = await fetch('users.json');
+        const users = await response.json();
+
+        if (users[username] && users[username] === password) {
+            window.location.href = 'dashboardfinal.html';
+        } else {
+            showError();
+        }
+    }
+</script>
+</body>
+</html>

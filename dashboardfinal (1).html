@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CyberMonitor - Supervision Windows Server</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #00ffff;
+      --primary-dark: #00c8c8;
+      --secondary-color: #9333ea;
+      --secondary-dark: #7a29cc;
+      --bg-dark: #0d0d1f;
+      --bg-darker: #080814;
+      --card-bg: #1b1b2f;
+      --card-border: rgba(255, 255, 255, 0.1);
+      --text-light: #ffffff;
+      --text-muted: #b3b3ff;
+      --success-color: #4CAF50;
+      --warning-color: #FFC107;
+      --danger-color: #F44336;
+      --transition-speed: 0.3s;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-light);
+      display: flex;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(147, 51, 234, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(0, 255, 255, 0.15) 0%, transparent 50%);
+    }
+    
+    .sidebar {
+      width: 300px;
+      background: linear-gradient(180deg, var(--bg-darker), rgba(30, 58, 138, 0.8));
+      height: 100vh;
+      box-shadow: 5px 0 25px rgba(0, 0, 0, 0.7);
+      position: fixed;
+      left: 0;
+      top: 0;
+      overflow-y: auto;
+      z-index: 100;
+      transition: all var(--transition-speed) ease;
+      backdrop-filter: blur(15px);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .sidebar-content {
+      padding: 25px;
+    }
+    
+    .logo-container {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      border-left: 4px solid var(--primary-color);
+      transition: all var(--transition-speed) ease;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .logo-container:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 255, 255, 0.3);
+    }
+    
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 5px;
+      color: var(--text-light);
+      font-size: 1.8em;
+      letter-spacing: 1px;
+      font-weight: 600;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+    
+    .sidebar-subtitle {
+      color: var(--text-muted);
+      text-align: center;
+      font-size: 0.8em;
+      margin-bottom: 0;
+      letter-spacing: 1px;
+    }
+    
+    .menu-section {
+      margin-bottom: 30px;
+    }
+    
+    .menu-header {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding-left: 15px;
+      position: relative;
+    }
+    
+    .menu-header::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 2px;
+      width: 8px;
+      background: var(--primary-color);
+      border-radius: 2px;
+    }
+    
+    .server-list {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 30px;
+    }
+    
+    .server-list li {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-light);
+      padding: 14px 18px;
+      margin: 10px 0;
+      border-radius: 10px;
+      text-align: left;
+      cursor: pointer;
+      transition: all var(--transition-speed) ease;
+      border-left: 3px solid transparent;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .server-list li::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.4s ease;
+    }
+    
+    .server-list li:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-left: 3px solid var(--primary-color);
+      transform: translateX(5px);
+    }
+    
+    .server-list li:hover::before {
+      transform: translateX(0);
+    }
+    
+    .server-list li.active {
+      background: rgba(255, 255, 255, 0.2);
+      border-left: 3px solid var(--primary-color);
+      font-weight: bold;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+    }
+    
+    .add-server {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      margin-bottom: 25px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(0, 200, 200, 0.2), rgba(147, 51, 234, 0.2));
+      color: var(--text-light);
+      transition: all var(--transition-speed) ease;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .add-server::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: 0.5s;
+    }
+    
+    .add-server:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 255, 255, 0.3);
+    }
+    
+    .add-server:hover::before {
+      left: 100%;
+    }
+    
+    .add-server i {
+      margin-right: 10px;
+      font-size: 1.1em;
+    }
+    
+    .menu-item {
+      padding: 14px 18px;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      transition: all var(--transition-speed) ease;
+      border-left: 3px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .menu-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--primary-color);
+      transform: scaleY(0);
+      transform-origin: bottom;
+      transition: transform 0.3s ease;
+    }
+    
+    .menu-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-left: 3px solid var(--primary-color);
+      transform: translateX(5px);
+    }
+    
+    .menu-item:hover::before {
+      transform: scaleY(1);
+    }
+    
+    .menu-item.active {
+      background: rgba(255, 255, 255, 0.15);
+      border-left: 3px solid var(--primary-color);
+      font-weight: bold;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    }
+    
+    .menu-item i {
+      margin-right: 15px;
+      width: 20px;
+      text-align: center;
+      font-size: 1.2em;
+    }
+    
+    .logout-btn {
+      width: 100%;
+      padding: 14px 18px;
+      margin-top: 40px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(244, 67, 54, 0.3));
+      color: var(--text-light);
+      transition: all var(--transition-speed) ease;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(244, 67, 54, 0.2);
+    }
+    
+    .logout-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transform: translateX(-100%);
+      transition: 0.5s;
+    }
+    
+    .logout-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(244, 67, 54, 0.3);
+    }
+    
+    .logout-btn:hover::after {
+      transform: translateX(100%);
+    }
+    
+    .logout-btn i {
+      margin-right: 12px;
+      font-size: 1.2em;
+    }
+    
+    .content {
+      flex: 1;
+      padding: 50px;
+      margin-left: 300px;
+      transition: all var(--transition-speed) ease;
+      min-height: 100vh;
+    }
+    
+    h1 {
+      font-size: 2.8em;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+      letter-spacing: 2px;
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      position: relative;
+      font-weight: 700;
+      text-align: center;
+    }
+    
+    h1::after {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+      border-radius: 4px;
+      box-shadow: 0 0 15px var(--primary-color);
+    }
+    
+    .server-info {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 25px;
+      border-radius: 15px;
+      margin-bottom: 40px;
+      text-align: left;
+      border-left: 4px solid var(--primary-color);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--card-border);
+      transition: all var(--transition-speed) ease;
+    }
+    
+    .server-info:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 255, 255, 0.2);
+    }
+    
+    .server-info h3 {
+      margin-top: 0;
+      color: var(--primary-color);
+      font-size: 1.6em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .server-info h3 i {
+      margin-right: 15px;
+      font-size: 1.2em;
+    }
+    
+    .server-info p {
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+    }
+    
+    .server-info p i {
+      margin-right: 12px;
+      width: 20px;
+      text-align: center;
+    }
+    
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 40px;
+      width: 95%;
+      max-width: 2000px;
+      margin: auto;
+    }
+    
+    .card {
+      background: var(--card-bg);
+      padding: 35px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: all var(--transition-speed) ease;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--card-border);
+    }
+    
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+      transition: all var(--transition-speed) ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0, 255, 255, 0.3);
+    }
+    
+    .card:hover::before {
+      height: 8px;
+    }
+    
+    .card-title {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      color: var(--text-muted);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .card-title i {
+      margin-right: 15px;
+      font-size: 1.3em;
+    }
+    
+    .value {
+      font-size: 3.2em;
+      font-weight: bold;
+      margin: 20px 0;
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+    
+    .value small {
+      font-size: 0.5em;
+      display: block;
+      margin-top: 5px;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 12px;
+      box-shadow: 0 0 15px currentColor;
+      position: relative;
+    }
+    
+    .status-indicator::after {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      bottom: -3px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-ok {
+      background-color: var(--success-color);
+      color: var(--success-color);
+    }
+    
+    .status-ok::after {
+      border: 1px solid var(--success-color);
+    }
+    
+    .status-warning {
+      background-color: var(--warning-color);
+      color: var(--warning-color);
+    }
+    
+    .status-warning::after {
+      border: 1px solid var(--warning-color);
+    }
+    
+    .status-critical {
+      background-color: var(--danger-color);
+      color: var(--danger-color);
+    }
+    
+    .status-critical::after {
+      border: 1px solid var(--danger-color);
+    }
+    
+    canvas {
+      margin-top: 25px;
+      height: 300px !important;
+      width: 100% !important;
+    }
+    
+    .toggle-sidebar {
+      position: fixed;
+      bottom: 40px;
+      left: 40px;
+      background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1000;
+      transition: all var(--transition-speed) ease;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      font-size: 1.8em;
+    }
+    
+    .toggle-sidebar:hover {
+      transform: scale(1.1) rotate(90deg);
+      box-shadow: 0 15px 35px rgba(0, 255, 255, 0.4);
+    }
+    
+    @media (max-width: 1400px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    @media (max-width: 1200px) {
+      .sidebar {
+        width: 250px;
+      }
+      
+      .content {
+        margin-left: 250px;
+        padding: 40px;
+      }
+    }
+    
+    @media (max-width: 992px) {
+      .sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+      }
+      
+      .sidebar.active {
+        transform: translateX(0);
+      }
+      
+      .content {
+        margin-left: 0;
+        padding: 30px;
+      }
+      
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+      
+      .card {
+        padding: 25px;
+      }
+      
+      h1 {
+        font-size: 2.2em;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .content {
+        padding: 20px;
+      }
+      
+      .card {
+        padding: 20px;
+      }
+      
+      .value {
+        font-size: 2.5em;
+      }
+      
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    
+    /* Animations */
+    @keyframes pulse {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      70% { transform: scale(1.1); opacity: 0.2; }
+      100% { transform: scale(0.8); opacity: 0.5; }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .loading {
+      animation: pulse 1.5s infinite;
+    }
+    
+    /* Tooltip */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 220px;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      text-align: center;
+      border-radius: 8px;
+      padding: 10px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.9em;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    }
+    
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75em;
+      font-weight: bold;
+      margin-left: 12px;
+      background: var(--primary-color);
+      color: var(--bg-dark);
+      box-shadow: 0 0 10px var(--primary-color);
+    }
+    
+    /* Notification dot */
+    .notification-dot {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--danger-color);
+      box-shadow: 0 0 10px var(--danger-color);
+      animation: pulse 1.5s infinite;
+    }
+    
+    /* Section cachée */
+    .hidden-section {
+      display: none;
+      animation: fadeIn 0.5s ease forwards;
+    }
+    
+    /* Style pour les logs */
+    .log-container {
+      max-height: 600px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 25px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    
+    .log-entry {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: 'Courier New', monospace;
+      font-size: 0.95em;
+      line-height: 1.6;
+      transition: all 0.2s ease;
+    }
+    
+    .log-entry:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-error {
+      color: var(--danger-color);
+    }
+    
+    .log-warning {
+      color: var(--warning-color);
+    }
+    
+    .log-info {
+      color: var(--primary-color);
+    }
+    
+    .log-success {
+      color: var(--success-color);
+    }
+    
+    .log-time {
+      color: var(--text-muted);
+      margin-right: 15px;
+    }
+    
+    /* Style pour la configuration */
+    .config-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 30px;
+    }
+    
+    .config-section {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 25px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .config-section h3 {
+      color: var(--primary-color);
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 1.3em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      font-size: 0.95em;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: var(--text-light);
+      transition: all var(--transition-speed) ease;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    }
+    
+    .btn {
+      padding: 12px 25px;
+      background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+      color: var(--text-light);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all var(--transition-speed) ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .btn i {
+      margin-right: 10px;
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: 0.5s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 255, 255, 0.4);
+    }
+    
+    .btn:hover::before {
+      left: 100%;
+    }
+    
+    /* Style pour les alertes */
+    .alerts-container {
+      margin-top: 30px;
+    }
+    
+    .alert-item {
+      padding: 20px;
+      background: rgba(255, 0, 0, 0.08);
+      border-left: 4px solid var(--danger-color);
+      border-radius: 10px;
+      margin-bottom: 15px;
+      transition: all var(--transition-speed) ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .alert-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255, 0, 0, 0.05), transparent);
+      z-index: -1;
+    }
+    
+    .alert-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(255, 0, 0, 0.2);
+    }
+    
+    .alert-item.warning {
+      background: rgba(255, 165, 0, 0.08);
+      border-left-color: var(--warning-color);
+    }
+    
+    .alert-item.warning::before {
+      background: linear-gradient(90deg, rgba(255, 165, 0, 0.05), transparent);
+    }
+    
+    .alert-item.warning:hover {
+      box-shadow: 0 10px 25px rgba(255, 165, 0, 0.2);
+    }
+    
+    .alert-item.info {
+      background: rgba(0, 255, 255, 0.08);
+      border-left-color: var(--primary-color);
+    }
+    
+    .alert-item.info::before {
+      background: linear-gradient(90deg, rgba(0, 255, 255, 0.05), transparent);
+    }
+    
+    .alert-item.info:hover {
+      box-shadow: 0 10px 25px rgba(0, 255, 255, 0.2);
+    }
+    
+    .alert-item h4 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+    }
+    
+    .alert-item h4 i {
+      margin-right: 12px;
+    }
+    
+    .alert-item p {
+      margin-bottom: 5px;
+      color: var(--text-muted);
+    }
+    
+    .alert-time {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+    }
+    
+    .alert-time i {
+      margin-right: 8px;
+    }
+    
+    /* Console */
+    .console-container {
+      margin-top: 30px;
+    }
+    
+    .console-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .console-actions button {
+      margin-left: 10px;
+    }
+    
+    .console-output {
+      background: #000;
+      color: #0f0;
+      padding: 20px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      height: 500px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      border: 1px solid rgba(0, 255, 0, 0.2);
+      box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+      line-height: 1.6;
+    }
+    
+    .console-output div {
+      margin-bottom: 5px;
+      word-break: break-word;
+    }
+    
+    .console-prompt {
+      color: #0f0;
+      font-weight: bold;
+    }
+    
+    .console-command {
+      color: #fff;
+    }
+    
+    .console-response {
+      color: #0ff;
+    }
+    
+    .console-error {
+      color: #f00;
+    }
+    
+    .console-warning {
+      color: #ff0;
+    }
+    
+    .console-input-container {
+      display: flex;
+      align-items: center;
+    }
+    
+    .console-prompt-sign {
+      color: #0f0;
+      font-weight: bold;
+      margin-right: 10px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .console-input {
+      flex: 1;
+      padding: 12px 15px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      border-radius: 5px;
+      outline: none;
+      transition: all var(--transition-speed) ease;
+    }
+    
+    .console-input:focus {
+      border-color: #0f0;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    }
+    
+    /* Scrollbar personnalisée */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(var(--primary-color), var(--secondary-color));
+      border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-content">
+      <div class="logo-container">
+        <h2><i class="fas fa-shield-alt"></i> CyberMonitor</h2>
+        <div class="sidebar-subtitle">v2.1.0</div>
+      </div>
+      
+      <div class="menu-section">
+        <div class="menu-header">Serveurs</div>
+        <ul class="server-list" id="serverList">
+          <li class="active" data-ip="192.168.214.131" onclick="selectServer('192.168.214.131', this)">
+            <span class="status-indicator status-ok"></span>
+            Serveur Principal
+          </li>
+        </ul>
+        <button class="add-server" onclick="addServer()">
+          <i class="fas fa-plus"></i> Ajouter un serveur
+        </button>
+      </div>
+      
+      <div class="menu-section">
+        <div class="menu-header">Navigation</div>
+        <a href="#" class="menu-item active" onclick="showSection('dashboard')">
+          <i class="fas fa-tachometer-alt"></i> Tableau de bord
+        </a>
+        <a href="#" class="menu-item" onclick="showSection('logs')">
+          <i class="fas fa-scroll"></i> Journaux
+        </a>
+        <a href="#" class="menu-item" onclick="showSection('config')">
+          <i class="fas fa-cog"></i> Configuration
+        </a>
+        <a href="#" class="menu-item" onclick="showSection('alerts')">
+          <i class="fas fa-bell"></i> Alertes <span class="badge">3</span>
+        </a>
+      </div>
+      
+      <div class="menu-section">
+        <div class="menu-header">Outils</div>
+        <a href="#" class="menu-item" onclick="showSection('analyze')">
+          <i class="fas fa-search"></i> Analyse
+        </a>
+        <a href="#" class="menu-item" onclick="showSection('reports')">
+          <i class="fas fa-file-alt"></i> Rapports
+        </a>
+        <a href="#" class="menu-item" onclick="showSection('console')">
+          <i class="fas fa-terminal"></i> Console
+        </a>
+      </div>
+      
+      <button class="logout-btn" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i> Déconnexion
+      </button>
+    </div>
+  </div>
+  
+  <button class="toggle-sidebar" id="toggleSidebar"><i class="fas fa-bars"></i></button>
+  
+  <div class="content">
+    <!-- Section Tableau de bord -->
+    <div id="dashboard-section">
+      <h1><i class="fas fa-server"></i> Supervision Windows Server</h1>
+      
+      <div class="server-info" id="serverInfo">
+        <h3 id="serverName"><i class="fas fa-server"></i> Serveur Principal (192.168.214.131)</h3>
+        <p><i class="fas fa-clock"></i> Dernière mise à jour: <span id="lastUpdate">-</span></p>
+        <p><i class="fas fa-circle-notch fa-spin"></i> Statut: <span id="serverStatus">Connecté</span></p>
+      </div>
+      
+      <div class="dashboard">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-memory"></i> Mémoire disponible</div>
+          <div class="value" id="memory"><span class="loading">Chargement...</span></div>
+          <canvas id="memoryChart"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-hdd"></i> Espace disque libre</div>
+          <div class="value" id="storage"><span class="loading">Chargement...</span></div>
+          <canvas id="storageChart"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-microchip"></i> Utilisation CPU</div>
+          <div class="value" id="cpu"><span class="loading">Chargement...</span></div>
+          <canvas id="cpuChart"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-code-branch"></i> Threads actifs</div>
+          <div class="value" id="threads"><span class="loading">Chargement...</span></div>
+          <canvas id="threadsChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Journaux -->
+    <div id="logs-section" class="hidden-section">
+      <h1><i class="fas fa-scroll"></i> Journaux système</h1>
+      
+      <div class="server-info">
+        <h3><i class="fas fa-server"></i> Serveur Principal (192.168.214.131)</h3>
+        <p><i class="fas fa-clock"></i> Dernière mise à jour: <span id="logsLastUpdate">-</span></p>
+      </div>
+      
+      <div class="log-container" id="logContainer">
+        <div class="log-entry log-info">
+          <span class="log-time">[10:15:32]</span> Système démarré avec succès
+        </div>
+        <div class="log-entry log-info">
+          <span class="log-time">[10:15:45]</span> Services Windows démarrés
+        </div>
+        <div class="log-entry log-warning">
+          <span class="log-time">[10:16:20]</span> Utilisation CPU élevée détectée (92%)
+        </div>
+        <div class="log-entry log-info">
+          <span class="log-time">[10:20:15]</span> Surveillance activée
+        </div>
+        <div class="log-entry log-error">
+          <span class="log-time">[10:25:42]</span> Échec de connexion SSH depuis 192.168.1.45
+        </div>
+        <div class="log-entry log-success">
+          <span class="log-time">[10:30:00]</span> Analyse de sécurité complétée - Aucune menace détectée
+        </div>
+        <div class="log-entry log-warning">
+          <span class="log-time">[10:35:18]</span> Mémoire disponible faible (15%)
+        </div>
+        <div class="log-entry log-info">
+          <span class="log-time">[10:40:22]</span> Sauvegarde planifiée démarrée
+        </div>
+        <div class="log-entry log-error">
+          <span class="log-time">[10:45:10]</span> Échec de mise à jour automatique - Code d'erreur 0x80070005
+        </div>
+        <div class="log-entry log-info">
+          <span class="log-time">[10:50:05]</span> Surveillance réseau active - 12 connexions établies
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Configuration -->
+    <div id="config-section" class="hidden-section">
+      <h1><i class="fas fa-cog"></i> Configuration du serveur</h1>
+      
+      <div class="server-info">
+        <h3><i class="fas fa-server"></i> Serveur Principal (192.168.214.131)</h3>
+        <p><i class="fas fa-clock"></i> Dernière modification: <span id="configLastUpdate">-</span></p>
+      </div>
+      
+      <div class="config-form">
+        <div class="config-section">
+          <h3><i class="fas fa-chart-line"></i> Paramètres de surveillance</h3>
+          <div class="form-group">
+            <label for="cpuThreshold"><i class="fas fa-microchip"></i> Seuil d'alerte CPU (%)</label>
+            <input type="number" id="cpuThreshold" class="form-control" value="85" min="1" max="100">
+          </div>
+          <div class="form-group">
+            <label for="memoryThreshold"><i class="fas fa-memory"></i> Seuil d'alerte mémoire (%)</label>
+            <input type="number" id="memoryThreshold" class="form-control" value="15" min="1" max="100">
+          </div>
+          <div class="form-group">
+            <label for="diskThreshold"><i class="fas fa-hdd"></i> Seuil d'alerte disque (%)</label>
+            <input type="number" id="diskThreshold" class="form-control" value="10" min="1" max="100">
+          </div>
+          <button class="btn" onclick="saveConfig()"><i class="fas fa-save"></i> Enregistrer</button>
+        </div>
+        
+        <div class="config-section">
+          <h3><i class="fas fa-bell"></i> Paramètres de notification</h3>
+          <div class="form-group">
+            <label for="emailAlerts"><i class="fas fa-envelope"></i> Alertes par email</label>
+            <select id="emailAlerts" class="form-control">
+              <option value="true">Activé</option>
+              <option value="false">Désactivé</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="emailAddress"><i class="fas fa-at"></i> Email de notification</label>
+            <input type="email" id="emailAddress" class="form-control" value="admin@example.com">
+          </div>
+          <div class="form-group">
+            <label for="updateInterval"><i class="fas fa-sync-alt"></i> Intervalle de mise à jour (secondes)</label>
+            <input type="number" id="updateInterval" class="form-control" value="5" min="1" max="60">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Alertes -->
+    <div id="alerts-section" class="hidden-section">
+      <h1><i class="fas fa-bell"></i> Alertes système <span class="badge">3</span></h1>
+      
+      <div class="server-info">
+        <h3><i class="fas fa-server"></i> Serveur Principal (192.168.214.131)</h3>
+        <p><i class="fas fa-clock"></i> Dernières alertes: <span id="alertsLastUpdate">-</span></p>
+      </div>
+      
+      <div class="alerts-container">
+        <div class="alert-item">
+          <h4><i class="fas fa-exclamation-circle"></i> Utilisation CPU élevée</h4>
+          <p>L'utilisation du CPU a atteint 92% pendant plus de 5 minutes</p>
+          <p class="alert-time"><i class="fas fa-clock"></i> 10:35 AM - Aujourd'hui</p>
+        </div>
+        
+        <div class="alert-item warning">
+          <h4><i class="fas fa-exclamation-triangle"></i> Mémoire disponible faible</h4>
+          <p>Seulement 15% de mémoire disponible - Considérer l'ajout de RAM</p>
+          <p class="alert-time"><i class="fas fa-clock"></i> 09:20 AM - Aujourd'hui</p>
+        </div>
+        
+        <div class="alert-item">
+          <h4><i class="fas fa-times-circle"></i> Échec de connexion SSH</h4>
+          <p>5 tentatives de connexion SSH infructueuses depuis 192.168.1.45</p>
+          <p class="alert-time"><i class="fas fa-clock"></i> 08:45 AM - Aujourd'hui</p>
+        </div>
+        
+        <div class="alert-item info">
+          <h4><i class="fas fa-info-circle"></i> Mise à jour disponible</h4>
+          <p>Nouvelle mise à jour de sécurité disponible pour Windows Server (KB5034123)</p>
+          <p class="alert-time"><i class="fas fa-clock"></i> Hier - 17:30</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Analyse -->
+    <div id="analyze-section" class="hidden-section">
+      <h1><i class="fas fa-search"></i> Analyse du système</h1>
+      
+      <div class="server-info">
+        <h3><i class="fas fa-server"></i> Serveur Principal (192.168.214.131)</h3>
+        <p><i class="fas fa-clock"></i> Dernière analyse: <span id="analyzeLastUpdate">-</span></p>
+      </div>
+      
+      <div class="dashboard">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-shield-alt"></i> Analyse de sécurité</div>
+          <div class="value">85<small>Score global</small></div>
+          <p>12 vérifications effectuées - 1 problème détecté</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-sync-alt"></i> Exécuter une analyse</button>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fas fa-bug"></i> Vulnérabilités</div>
+          <div class="value">3<small>Critiques</small></div>
+          <p>2 vulnérabilités moyennes - 5 faibles</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-list"></i> Voir les détails</button>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fas fa-network-wired"></i> Analyse réseau</div>
+          <div class="value">12<small>Connexions</small></div>
+          <p>3 ports ouverts - 1 service vulnérable</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-chart-bar"></i> Statistiques</button>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fas fa-history"></i> Historique</div>
+          <div class="value">24<small>Analyses</small></div>
+          <p>5 alertes cette semaine - 10 résolues</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-calendar"></i> Voir l'historique</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Rapports -->
+    <div id="reports-section" class="hidden-section">
+      <h1><i class="fas fa-file-alt"></i> Rapports système</h1>
+      
+      <div class="server-info">
+        <h3><i class="fas fa-server"></i> Serveur Principal (192.168.214.131)</h3>
+        <p><i class="fas fa-clock"></i> Dernier rapport généré: <span id="reportsLastUpdate">-</span></p>
+      </div>
+      
+      <div class="dashboard">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-calendar-day"></i> Rapport quotidien</div>
+          <p>Résumé des performances et événements du jour</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-download"></i> Télécharger (PDF)</button>
+          <button class="btn" style="margin-top: 10px;"><i class="fas fa-eye"></i> Aperçu</button>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fas fa-calendar-week"></i> Rapport hebdomadaire</div>
+          <p>Analyse des tendances sur 7 jours</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-download"></i> Télécharger (PDF)</button>
+          <button class="btn" style="margin-top: 10px;"><i class="fas fa-eye"></i> Aperçu</button>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Rapport d'alertes</div>
+          <p>Liste complète des alertes et incidents</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-download"></i> Télécharger (CSV)</button>
+          <button class="btn" style="margin-top: 10px;"><i class="fas fa-eye"></i> Aperçu</button>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fas fa-shield-alt"></i> Rapport de sécurité</div>
+          <p>Analyse des vulnérabilités et recommandations</p>
+          <button class="btn" style="margin-top: 15px;"><i class="fas fa-download"></i> Télécharger (PDF)</button>
+          <button class="btn" style="margin-top: 10px;"><i class="fas fa-eye"></i> Aperçu</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Console -->
+    <div id="console-section" class="hidden-section">
+      <h1><i class="fas fa-terminal"></i> Console d'administration</h1>
+      
+      <div class="server-info">
+        <h3><i class="fas fa-server"></i> Serveur Principal (192.168.214.131)</h3>
+        <p><i class="fas fa-clock"></i> Dernière commande exécutée: <span id="consoleLastUpdate">-</span></p>
+      </div>
+      
+      <div class="console-container">
+        <div class="console-header">
+          <h3><i class="fas fa-terminal"></i> Terminal PowerShell</h3>
+          <div class="console-actions">
+            <button class="btn" onclick="clearConsole()"><i class="fas fa-trash"></i> Effacer</button>
+            <button class="btn" onclick="runSampleCommand()"><i class="fas fa-play"></i> Exécuter</button>
+          </div>
+        </div>
+        
+        <div class="console-output" id="consoleOutput">
+          <div class="console-prompt">PS C:\Windows\system32></div>
+          <div class="console-response">Bienvenue dans la console d'administration CyberMonitor v2.1.0</div>
+          <div class="console-response">Tapez 'help' pour voir les commandes disponibles</div>
+          <div class="console-prompt">PS C:\Windows\system32></div>
+        </div>
+        
+        <div class="console-input-container">
+          <span class="console-prompt-sign">></span>
+          <input type="text" class="console-input" id="consoleInput" placeholder="Entrez une commande PowerShell..." onkeypress="handleConsoleInput(event)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const servers = ["192.168.214.131"];
+    let currentServer = servers[0];
+    let connectionStatus = true;
+    let currentSection = 'dashboard';
+
+    const memoryData = [];
+    const cpuData = [];
+    const storageData = [];
+    const threadsData = [];
+
+    let memoryChart, cpuChart, storageChart, threadsChart;
+
+    function getPrometheusURL() {
+      return `http://${currentServer}:9090/api/v1/query`;
+    }
+
+    async function fetchMetric(metric, label = "") {
+      try {
+        const response = await fetch(`${getPrometheusURL()}?query=${encodeURIComponent(metric + label)}`);
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+        return data.data.result.length > 0 ? parseFloat(data.data.result[0].value[1]) : null;
+      } catch (error) {
+        console.error(`Erreur lors de la récupération de la métrique ${metric}:`, error);
+        connectionStatus = false;
+        return null;
+      }
+    }
+
+    async function updateDashboard() {
+      try {
+        // Vérifier la connexion d'abord
+        connectionStatus = true;
+        
+        // Mémoire
+        const memory = await fetchMetric("windows_memory_available_bytes");
+        const totalMemory = await fetchMetric("windows_memory_physical_total_bytes");
+        const memoryPercent = memory && totalMemory ? (memory / totalMemory) * 100 : null;
+
+        // Stockage
+        const storage = await fetchMetric('windows_logical_disk_free_bytes', '{volume="C:"}');
+        const totalStorage = await fetchMetric('windows_logical_disk_size_bytes', '{volume="C:"}');
+        const storagePercent = storage && totalStorage ? (storage / totalStorage) * 100 : null;
+
+        // CPU
+        const cpuIdle = await fetchMetric('avg(rate(windows_cpu_time_total{mode="idle"}[1m]))');
+        const cpuUsage = cpuIdle !== null ? (100 - (cpuIdle * 100)) : null;
+
+        // Threads
+        const threads = await fetchMetric('windows_system_threads') || 
+                       await fetchMetric('windows_os_threads');
+
+        // Mise à jour des graphiques
+        if (memoryPercent !== null) memoryData.push(memoryPercent);
+        if (cpuUsage !== null) cpuData.push(cpuUsage);
+        if (storagePercent !== null) storageData.push(storagePercent);
+        if (threads !== null) threadsData.push(threads);
+
+        // Limiter la taille des données pour les graphiques
+        const maxDataPoints = 15;
+        if (memoryData.length > maxDataPoints) memoryData.shift();
+        if (cpuData.length > maxDataPoints) cpuData.shift();
+        if (storageData.length > maxDataPoints) storageData.shift();
+        if (threadsData.length > maxDataPoints) threadsData.shift();
+
+        // Mise à jour des valeurs affichées
+        document.getElementById("memory").innerHTML = memoryPercent !== null ? 
+          `${memoryPercent.toFixed(1)}<small>% libre</small>` : 
+          '<span class="tooltip">N/A<span class="tooltiptext">Données non disponibles</span></span>';
+          
+        document.getElementById("storage").innerHTML = storagePercent !== null ? 
+          `${storagePercent.toFixed(1)}<small>% libre</small>` : 
+          '<span class="tooltip">N/A<span class="tooltiptext">Données non disponibles</span></span>';
+          
+        document.getElementById("cpu").innerHTML = cpuUsage !== null ? 
+          `${cpuUsage.toFixed(1)}<small>% utilisé</small>` : 
+          '<span class="tooltip">N/A<span class="tooltiptext">Données non disponibles</span></span>';
+          
+        document.getElementById("threads").innerHTML = threads !== null ? 
+          `${Math.round(threads).toLocaleString()}<small>threads</small>` : 
+          '<span class="tooltip">N/A<span class="tooltiptext">Données non disponibles</span></span>';
+
+        // Mise à jour des graphiques
+        updateChart(memoryChart, memoryData);
+        updateChart(cpuChart, cpuData);
+        updateChart(storageChart, storageData);
+        updateChart(threadsChart, threadsData);
+
+        // Mise à jour de l'heure de dernière mise à jour
+        const now = new Date();
+        document.getElementById("lastUpdate").textContent = now.toLocaleTimeString();
+        document.getElementById("serverStatus").textContent = connectionStatus ? "Connecté" : "Déconnecté";
+        document.getElementById("serverStatus").style.color = connectionStatus ? "var(--success-color)" : "var(--danger-color)";
+
+        // Mettre à jour aussi les autres sections si elles sont visibles
+        if (currentSection === 'logs') {
+          document.getElementById("logsLastUpdate").textContent = now.toLocaleTimeString();
+        } else if (currentSection === 'config') {
+          document.getElementById("configLastUpdate").textContent = now.toLocaleTimeString();
+        } else if (currentSection === 'alerts') {
+          document.getElementById("alertsLastUpdate").textContent = now.toLocaleTimeString();
+        } else if (currentSection === 'analyze') {
+          document.getElementById("analyzeLastUpdate").textContent = now.toLocaleTimeString();
+        } else if (currentSection === 'reports') {
+          document.getElementById("reportsLastUpdate").textContent = now.toLocaleTimeString();
+        } else if (currentSection === 'console') {
+          document.getElementById("consoleLastUpdate").textContent = now.toLocaleTimeString();
+        }
+
+      } catch (err) {
+        console.error("Erreur lors du chargement des métriques :", err);
+        document.getElementById("serverStatus").textContent = "Erreur de connexion";
+        document.getElementById("serverStatus").style.color = "var(--danger-color)";
+      }
+    }
+
+    function updateChart(chart, data) {
+      if (chart && data) {
+        chart.data.labels = data.map((_, i) => i + 1);
+        chart.data.datasets[0].data = data;
+        chart.update();
+      }
+    }
+
+    function createChart(ctx, label, data, color) {
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array.from({ length: data.length }, (_, i) => i + 1),
+          datasets: [{
+            label,
+            data,
+            borderColor: color,
+            backgroundColor: color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: color,
+            pointHoverRadius: 6,
+            pointBorderColor: 'rgba(255, 255, 255, 0.8)',
+            pointBorderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { 
+              beginAtZero: true,
+              max: ctx.id === 'cpuChart' || ctx.id === 'memoryChart' || ctx.id === 'storageChart' ? 100 : undefined,
+              min: 0,
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.7)',
+                font: {
+                  size: 12
+                }
+              },
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)',
+                borderDash: [5, 5]
+              }
+            },
+            x: {
+              ticks: {
+                color: 'rgba(255, 255, 255, 0.7)',
+                font: {
+                  size: 12
+                }
+              },
+              grid: {
+                color: 'rgba(255, 255, 255, 0.05)',
+                drawBorder: false
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              titleColor: 'var(--primary-color)',
+              bodyColor: 'var(--text-light)',
+              borderColor: 'var(--primary-color)',
+              borderWidth: 1,
+              cornerRadius: 8,
+              padding: 12,
+              bodyFont: {
+                size: 14
+              },
+              titleFont: {
+                size: 16,
+                weight: 'bold'
+              },
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    label += context.parsed.y.toFixed(2) + (ctx.id === 'cpuChart' || ctx.id === 'memoryChart' || ctx.id === 'storageChart' ? '%' : '');
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          elements: {
+            line: {
+              cubicInterpolationMode: 'monotone'
+            }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          }
+        }
+      });
+    }
+
+    function initCharts() {
+      memoryChart = createChart(document.getElementById("memoryChart"), "Mémoire disponible %", memoryData, "rgb(0, 255, 255)");
+      cpuChart = createChart(document.getElementById("cpuChart"), "CPU %", cpuData, "rgb(0, 255, 0)");
+      storageChart = createChart(document.getElementById("storageChart"), "Disque libre %", storageData, "rgb(255, 0, 255)");
+      threadsChart = createChart(document.getElementById("threadsChart"), "Threads actifs", threadsData, "rgb(255, 255, 0)");
+    }
+
+    function showSection(sectionId) {
+      // Masquer toutes les sections
+      document.querySelectorAll('.hidden-section').forEach(section => {
+        section.style.display = 'none';
+      });
+      document.getElementById('dashboard-section').style.display = 'none';
+      
+      // Afficher la section sélectionnée
+      if (sectionId === 'dashboard') {
+        document.getElementById('dashboard-section').style.display = 'block';
+      } else {
+        document.getElementById(sectionId + '-section').style.display = 'block';
+      }
+      
+      // Mettre à jour le menu actif
+      document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      event.currentTarget.classList.add('active');
+      
+      // Enregistrer la section actuelle
+      currentSection = sectionId;
+      
+      // Mettre à jour les données si nécessaire
+      updateDashboard();
+    }
+
+    function addServer() {
+      const ip = prompt("Entrez l'adresse IP du serveur à superviser:", "192.168.x.x");
+      if (ip && ip.trim() !== "" && !servers.includes(ip)) {
+        servers.push(ip);
+        const listItem = document.createElement("li");
+        listItem.innerHTML = `<span class="status-indicator status-ok"></span>Serveur ${servers.length}`;
+        listItem.setAttribute("data-ip", ip);
+        listItem.onclick = function() { selectServer(ip, this); };
+        document.getElementById("serverList").appendChild(listItem);
+        
+        // Animation d'ajout
+        listItem.style.opacity = "0";
+        setTimeout(() => {
+          listItem.style.transition = "opacity 0.5s ease";
+          listItem.style.opacity = "1";
+        }, 100);
+      }
+    }
+
+    function selectServer(ip, element) {
+      currentServer = ip;
+      
+      // Mise à jour de la classe active
+      const serverItems = document.querySelectorAll('.server-list li');
+      serverItems.forEach(item => {
+        item.classList.remove('active');
+        item.style.transform = "";
+      });
+      
+      if (element) {
+        element.classList.add('active');
+        element.style.transform = "translateX(5px)";
+      }
+      
+      // Mise à jour des informations serveur
+      const serverName = element ? element.textContent.trim().replace(/^\s+|\s+$/g, '') : 'Serveur';
+      document.getElementById("serverName").innerHTML = `<i class="fas fa-server"></i> ${serverName} (${ip})`;
+      
+      // Réinitialiser les données
+      memoryData.length = 0;
+      cpuData.length = 0;
+      storageData.length = 0;
+      threadsData.length = 0;
+      
+      // Mettre à jour le tableau de bord
+      updateDashboard();
+      
+      // Effet visuel
+      document.querySelector(".content").style.opacity = "0.5";
+      setTimeout(() => {
+        document.querySelector(".content").style.transition = "opacity 0.3s ease";
+        document.querySelector(".content").style.opacity = "1";
+      }, 300);
+    }
+
+    function saveConfig() {
+      const now = new Date();
+      document.getElementById("configLastUpdate").textContent = now.toLocaleTimeString();
+      
+      Swal.fire({
+        title: 'Configuration enregistrée',
+        text: 'Les paramètres ont été sauvegardés avec succès',
+        icon: 'success',
+        timer: 1500,
+        background: 'var(--card-bg)',
+        color: 'var(--text-light)',
+        showConfirmButton: false
+      });
+    }
+
+    function clearConsole() {
+      document.getElementById("consoleOutput").innerHTML = `
+        <div class="console-prompt">PS C:\Windows\system32></div>
+        <div class="console-response">Console effacée</div>
+        <div class="console-prompt">PS C:\Windows\system32></div>
+      `;
+    }
+
+    function runSampleCommand() {
+      const output = document.getElementById("consoleOutput");
+      output.innerHTML += `
+        <div class="console-prompt">PS C:\Windows\system32> Get-SystemInfo</div>
+        <div class="console-response">Nom du système: SERVEUR-PRINCIPAL</div>
+        <div class="console-response">OS: Microsoft Windows Server 2022</div>
+        <div class="console-response">Processeurs: 4 cores @ 2.8GHz</div>
+        <div class="console-response">Mémoire: 32GB (15.2GB disponible)</div>
+        <div class="console-prompt">PS C:\Windows\system32></div>
+      `;
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function handleConsoleInput(event) {
+      if (event.key === 'Enter') {
+        const input = document.getElementById("consoleInput");
+        const output = document.getElementById("consoleOutput");
+        const command = input.value.trim();
+        
+        // Ajouter la commande à l'historique
+        output.innerHTML += `<div class="console-prompt">PS C:\Windows\system32> ${command}</div>`;
+        
+        // Traiter la commande
+        if (command.toLowerCase() === 'help') {
+          output.innerHTML += `
+            <div class="console-response">Commandes disponibles:</div>
+            <div class="console-response">- help: Affiche cette aide</div>
+            <div class="console-response">- clear: Efface la console</div>
+            <div class="console-response">- status: Affiche le statut du serveur</div>
+            <div class="console-response">- services: Liste les services en cours d'exécution</div>
+            <div class="console-response">- processes: Liste les processus en cours</div>
+            <div class="console-response">- restart [service]: Redémarre un service</div>
+          `;
+        } else if (command.toLowerCase() === 'clear') {
+          clearConsole();
+          input.value = '';
+          return;
+        } else if (command.toLowerCase() === 'status') {
+          output.innerHTML += `
+            <div class="console-response">Statut du serveur: Opérationnel</div>
+            <div class="console-response">CPU: ${document.getElementById("cpu").textContent}</div>
+            <div class="console-response">Mémoire: ${document.getElementById("memory").textContent}</div>
+            <div class="console-response">Disque: ${document.getElementById("storage").textContent}</div>
+          `;
+        } else if (command.toLowerCase() === 'services') {
+          output.innerHTML += `
+            <div class="console-response">Services en cours d'exécution:</div>
+            <div class="console-response">- WinRM (Running)</div>
+            <div class="console-response">- Windows Update (Running)</div>
+            <div class="console-response">- SQL Server (Running)</div>
+            <div class="console-response">- IIS Admin (Running)</div>
+          `;
+        } else if (command.toLowerCase() === 'processes') {
+          output.innerHTML += `
+            <div class="console-response">Processus en cours (Top 5 par CPU):</div>
+            <div class="console-response">- System (2.5%)</div>
+            <div class="console-response">- sqlservr (15.2%)</div>
+            <div class="console-response">- w3wp (8.7%)</div>
+            <div class="console-response">- chrome (12.3%)</div>
+            <div class="console-response">- powershell (1.2%)</div>
+          `;
+        } else if (command.toLowerCase().startsWith('restart ')) {
+          const service = command.substring(8);
+          output.innerHTML += `
+            <div class="console-response">Redémarrage du service "${service}"...</div>
+            <div class="console-response success">Service "${service}" redémarré avec succès</div>
+          `;
+        } else if (command === '') {
+          // Ne rien faire pour une commande vide
+        } else {
+          output.innerHTML += `<div class="console-error">Commande non reconnue: ${command}. Tapez 'help' pour voir les commandes disponibles</div>`;
+        }
+        
+        // Ajouter une nouvelle ligne
+        output.innerHTML += '<div class="console-prompt">PS C:\Windows\system32></div>';
+        
+        // Vider le champ de saisie
+        input.value = '';
+        
+        // Faire défiler vers le bas
+        output.scrollTop = output.scrollHeight;
+        
+        // Mettre à jour l'heure
+        const now = new Date();
+        document.getElementById("consoleLastUpdate").textContent = now.toLocaleTimeString();
+      }
+    }
+
+    function logout() {
+      Swal.fire({
+        title: 'Déconnexion',
+        text: "Êtes-vous sûr de vouloir vous déconnecter?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Oui, déconnecter',
+        cancelButtonText: 'Annuler',
+        background: 'var(--card-bg)',
+        color: 'var(--text-light)'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            title: 'Déconnecté!',
+            text: 'Vous avez été déconnecté avec succès.',
+            icon: 'success',
+            timer: 1500,
+            background: 'var(--card-bg)',
+            color: 'var(--text-light)',
+            showConfirmButton: false
+          }).then(() => {
+            // Rediriger vers la page de connexion
+            window.location.href = "login.html";
+          });
+        }
+      });
+    }
+
+    // Toggle sidebar
+    document.getElementById('toggleSidebar').addEventListener('click', function() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('active');
+      
+      if (sidebar.classList.contains('active')) {
+        this.innerHTML = '<i class="fas fa-times"></i>';
+      } else {
+        this.innerHTML = '<i class="fas fa-bars"></i>';
+      }
+    });
+
+    // Fermer le sidebar si on clique à l'extérieur
+    document.addEventListener('click', function(event) {
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('toggleSidebar');
+      
+      if (window.innerWidth <= 992 && 
+          !sidebar.contains(event.target) && 
+          event.target !== toggleBtn && 
+          !toggleBtn.contains(event.target)) {
+        sidebar.classList.remove('active');
+        toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
+      }
+    });
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function() {
+      initCharts();
+      updateDashboard();
+      
+      // Mise à jour périodique
+      setInterval(updateDashboard, 5000);
+      
+      // Animation d'entrée
+      setTimeout(() => {
+        document.querySelector(".sidebar").style.transform = "translateX(0)";
+        document.querySelector(".content").style.opacity = "1";
+      }, 100);
+    });
+  </script>
+  
+  <!-- SweetAlert pour de belles alertes -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>
